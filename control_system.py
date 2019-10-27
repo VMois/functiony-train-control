@@ -1,12 +1,18 @@
 import cv2
 import json
 import time
+import numpy as np
 from tensorflow import keras
 import urllib.request
 
 MAX_SPEED = 1023
 DEFAULT_SPEED = 800
 MINIMAL_SPEED = 750
+
+width = 150
+height = 200
+
+PREDICTION_THRESHOLD = 0.8
 
 train_base_address = 'http://192.168.0.180'
 track_base_address = 'http://192.168.0.100:5000'
@@ -23,7 +29,30 @@ print('Loaded model from disk')
 
 
 def crop_frame(frame):
-    pass
+    return frame
+    # y = 480 - height
+    # x = int((640 - width) / 2)
+    # return frame[y:y + height, x:x + width]
+
+
+def read_frame():
+    return [[1,2,3], [1,2,3]]
+    # if scap.isOpened():
+    #     ret, frame = scap.read()
+    #     if ret == 1:
+    #         return frame
+
+
+def is_collision():
+    frame = read_frame()
+    frame = crop_frame(frame)
+    prediction = loaded_model.predict(np.array([frame]))
+    return prediction[0][0] < PREDICTION_THRESHOLD
+
+
+def handle_collision():
+    set_speed(0)
+    time.sleep(0.5)
 
 
 def set_speed(speed: int):
@@ -34,7 +63,8 @@ def set_speed(speed: int):
     query_string = urllib.parse.urlencode(params)
 
     train_speed_url = train_speed_url + '?' + query_string
-    urllib.request.urlopen(train_speed_url)
+    print('speed set: ', speed)
+    #urllib.request.urlopen(train_speed_url)
 
 
 def get_track_data():
@@ -73,24 +103,26 @@ def should_camera_be_activate(position):
 
 
 prev_activated_sensors = []
+collision_detected = False
 
 while True:
+    if collision_detected:
+        if is_collision():
+            handle_collision()
+        else:
+            collision_detected = False
+
     track_data = get_track_data()
     activated_sensors = find_activated_sensors(track_data['track']['rail_sections'])
-    #if len(activated_sensors) != 0:
-    #    print(activated_sensors)
     new_leading_position = get_leading_position(activated_sensors, prev_activated_sensors)
     if new_leading_position:
-        if should_camera_be_activate(new_leading_position):
-            pass
         print(new_leading_position)
+        if should_camera_be_activate(new_leading_position):
+            if is_collision():
+                handle_collision()
+                continue
+            else:
+                collision_detected = False
         speed = position_to_speed(new_leading_position)
-        print(speed)
-    #set_speed(current_speed)
+        set_speed(speed)
     prev_activated_sensors = activated_sensors
-    time.sleep(0.1)
-# 800 on turns
-# 700 on
-#set_speed(700)
-#time.sleep(20)
-
