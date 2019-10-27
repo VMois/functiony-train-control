@@ -1,12 +1,6 @@
 # Awesome Train Station - JunctionX Budapest 2019
 
-Team:
-
-- Luis
-- Sadig
-- Rodrigo
-- Honey :)
-- Vlad
+Team: Luis, @qurzazade1, @RodrigoProgr, Honey, Vlad (me)
 
 Prepare env:
 
