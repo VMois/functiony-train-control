@@ -7,12 +7,12 @@ import urllib.request
 
 MAX_SPEED = 1023
 DEFAULT_SPEED = 800
-MINIMAL_SPEED = 750
+MINIMAL_SPEED = 700
 
 width = 150
-height = 200
+height = 150
 
-PREDICTION_THRESHOLD = 0.8
+PREDICTION_THRESHOLD = 0.92
 
 train_base_address = 'http://192.168.0.180'
 track_base_address = 'http://192.168.0.100:5000'
@@ -31,7 +31,9 @@ print('Loaded model from disk')
 def crop_frame(frame):
     y = 480 - height
     x = int((640 - width) / 2)
-    return frame[y:y + height, x:x + width]
+    new_frame = cv2.Canny(frame, 100, 200)
+    new_frame = new_frame[y:y + height, x:x + width]
+    return new_frame
 
 
 def read_frame():
@@ -44,7 +46,8 @@ def read_frame():
 def is_collision():
     frame = read_frame()
     frame = crop_frame(frame)
-    prediction = loaded_model.predict(np.array([frame]))
+    prediction = loaded_model.predict(np.expand_dims(np.array([frame]), axis=3))
+    print(prediction[0][0])
     return prediction[0][0] < PREDICTION_THRESHOLD
 
 
@@ -84,11 +87,11 @@ def get_leading_position(sensors_activated, prev_sensors):
 
 
 def position_to_speed(position):
-    if position in [33, 25, 12, 26]:
+    if position in [33, 24, 23, 12, 26, 34]:
         return MAX_SPEED
-    elif position in [31, 34, 13, 11, 24, 32, 27, 23]:
+    elif position in [31, 32, 13, 11, 27, 25, 21]:
         return DEFAULT_SPEED
-    elif position in [21]:
+    elif position in [11]:
         return MINIMAL_SPEED
     else:
         return MINIMAL_SPEED
@@ -100,6 +103,7 @@ def should_camera_be_activate(position):
 
 prev_activated_sensors = []
 prev_speed = 0
+prev_leading_position = None
 collision_detected = False
 
 while True:
@@ -113,16 +117,27 @@ while True:
     activated_sensors = find_activated_sensors(track_data['track']['rail_sections'])
     new_leading_position = get_leading_position(activated_sensors, prev_activated_sensors)
     if new_leading_position:
+        prev_leading_position = new_leading_position
+        if new_leading_position in [32, 13, 11]:
+            set_speed(0)
+            time.sleep(2)
         if should_camera_be_activate(new_leading_position):
             if is_collision():
+                print('collision')
                 collision_detected = True
                 handle_collision()
                 continue
             else:
                 collision_detected = False
+        else:
+            print('no camera')
         speed = position_to_speed(new_leading_position)
         if speed != prev_speed:
             set_speed(speed)
             prev_speed = speed
 
+    speed = position_to_speed(prev_leading_position)
+    if speed != prev_speed:
+        set_speed(speed)
+        prev_speed = speed
     prev_activated_sensors = activated_sensors
