@@ -1,6 +1,9 @@
 # Awesome Train Station - JunctionX Budapest 2019
 
+Originally on Gitlab
+
 Team: Luis, @qurzazade1, @RodrigoProgr, Honey, Vlad (me)
+
 
 Prepare env:
 
