@@ -29,18 +29,16 @@ print('Loaded model from disk')
 
 
 def crop_frame(frame):
-    return frame
-    # y = 480 - height
-    # x = int((640 - width) / 2)
-    # return frame[y:y + height, x:x + width]
+    y = 480 - height
+    x = int((640 - width) / 2)
+    return frame[y:y + height, x:x + width]
 
 
 def read_frame():
-    return [[1,2,3], [1,2,3]]
-    # if scap.isOpened():
-    #     ret, frame = scap.read()
-    #     if ret == 1:
-    #         return frame
+    if scap.isOpened():
+        ret, frame = scap.read()
+        if ret == 1:
+            return frame
 
 
 def is_collision():
@@ -63,8 +61,7 @@ def set_speed(speed: int):
     query_string = urllib.parse.urlencode(params)
 
     train_speed_url = train_speed_url + '?' + query_string
-    print('speed set: ', speed)
-    #urllib.request.urlopen(train_speed_url)
+    urllib.request.urlopen(train_speed_url)
 
 
 def get_track_data():
@@ -84,7 +81,6 @@ def get_leading_position(sensors_activated, prev_sensors):
     result = list(set(sensors_activated) - set(prev_sensors))
     if len(result):
         return result[0]
-    return None
 
 
 def position_to_speed(position):
@@ -103,6 +99,7 @@ def should_camera_be_activate(position):
 
 
 prev_activated_sensors = []
+prev_speed = 0
 collision_detected = False
 
 while True:
@@ -116,13 +113,16 @@ while True:
     activated_sensors = find_activated_sensors(track_data['track']['rail_sections'])
     new_leading_position = get_leading_position(activated_sensors, prev_activated_sensors)
     if new_leading_position:
-        print(new_leading_position)
         if should_camera_be_activate(new_leading_position):
             if is_collision():
+                collision_detected = True
                 handle_collision()
                 continue
             else:
                 collision_detected = False
         speed = position_to_speed(new_leading_position)
-        set_speed(speed)
+        if speed != prev_speed:
+            set_speed(speed)
+            prev_speed = speed
+
     prev_activated_sensors = activated_sensors
